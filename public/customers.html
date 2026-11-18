@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customers · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/customers.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>Customers</h1><p>Register, edit and deactivate client accounts.</p></div></div>
+<form id="cust_form" class="card"><h2 id="form_title">Register a client</h2>
+  <div class="form-grid">
+    <div class="field"><label for="meter_id">Meter number</label><input id="meter_id" inputmode="numeric" maxlength="10" required></div>
+    <div class="field"><label for="first_name">First name</label><input id="first_name" maxlength="100" required></div>
+    <div class="field"><label for="last_name">Last name</label><input id="last_name" maxlength="100" required></div>
+    <div class="field"><label for="barangay">Barangay</label><select id="barangay" required></select></div>
+    <div class="field"><label for="sitio">Sitio</label><input id="sitio" maxlength="100" required></div>
+  </div>
+  <div class="row"><button class="btn" id="save_btn" type="submit">Register client</button><button class="btn secondary" id="cancel_btn" type="button" hidden>Cancel edit</button></div>
+  <div id="cust_msg" role="alert" hidden></div></form>
+<div class="card"><h2>Accounts</h2>
+  <form id="search_form" class="row"><div class="grow"><label for="q">Meter number or name</label><input id="q" placeholder="Search"></div>
+    <div><label for="brgy_filter">Barangay</label><select id="brgy_filter"></select></div>
+    <label class="check"><input type="checkbox" id="inactive"> Show inactive</label><button class="btn" type="submit">Search</button></form>
+  <div id="list"></div></div>
+</main></body></html>

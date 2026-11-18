@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily report · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/reports.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>Daily collection report</h1><p>Payments recorded for one day. Use it to reconcile cash on hand.</p></div><button id="print_btn" class="btn secondary no-print" type="button">Print</button></div>
+<form id="rep_form" class="card row no-print"><div><label for="date">Date</label><input id="date" type="date" required></div>
+  <div id="brgy_wrap" hidden><label for="brgy">Barangay</label><select id="brgy"></select></div><button class="btn" type="submit">Show report</button></form>
+<div id="msg" role="alert" hidden></div><div id="report"></div>
+</main></body></html>

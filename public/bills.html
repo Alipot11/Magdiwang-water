@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bills · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/bills.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>Post bills</h1><p>Enter current readings and amounts. Consumption and totals are computed for you. One bill per meter per month.</p></div></div>
+<form id="sheet_form" class="card"><div class="form-grid">
+  <div class="field"><label for="period">Billing month</label><input id="period" type="month" required></div>
+  <div class="field"><label for="duedate">Due date</label><input id="duedate" type="date" required></div>
+  <div class="field"><label for="brgy">Barangay</label><select id="brgy"></select></div></div>
+  <button class="btn" type="submit">Load customers without a bill</button><div id="sheet_msg" role="alert" hidden></div></form>
+<div id="sheet_card" class="card" hidden>
+  <div class="row"><div class="grow"><label for="filter">Filter by meter or name</label><input id="filter" placeholder="Type to filter"></div>
+    <button class="btn" id="post_btn" type="button">Post filled bills</button><a class="btn secondary" id="print_link" href="#" target="_blank">Print bills for this month</a></div>
+  <p class="small muted">Only rows with a current reading are posted. A customer’s first-ever bill also needs a previous (starting) reading.</p>
+  <div id="post_msg" role="alert" hidden></div><div id="sheet"></div></div>
+</main></body></html>

@@ -1,0 +1,2 @@
+@page { size: A4; margin: 15mm; }
+@media print { .paper { width: 100%; font-size: 13px; } }

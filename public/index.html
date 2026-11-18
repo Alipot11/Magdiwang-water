@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Water Account · Magdiwang</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/portal.js"></script></head>
+<body class="portal"><div class="portal-wrap">
+<div class="portal-top"><span data-i18n="site"></span><button id="lang_toggle" class="btn" type="button"></button></div>
+<h1 class="portal-title" data-i18n="lookup_title"></h1>
+<p class="portal-sub" data-i18n="lookup_help"></p>
+<form id="lookup_form" class="card" autocomplete="off">
+  <div class="form-grid">
+    <div class="field"><label for="meter_id" data-i18n="meter"></label><input id="meter_id" inputmode="numeric" pattern="[0-9]*" maxlength="10" required></div>
+    <div class="field"><label for="first_name" data-i18n="first_name"></label><input id="first_name" maxlength="100" required></div>
+    <div class="field"><label for="last_name" data-i18n="last_name"></label><input id="last_name" maxlength="100" required></div>
+  </div>
+  <button id="lookup_btn" class="btn" type="submit" data-i18n="view"></button>
+  <div id="lookup_msg" role="alert" hidden></div>
+</form>
+<div id="result" hidden></div>
+<div class="footer-links"><a href="/complaint.html" data-i18n="complaint_link"></a><a href="/login.html" data-i18n="staff_login"></a></div>
+</div></body></html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backup · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/backup.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>Backup</h1><p>Backups are stored on a computer in your office. Nothing is sent to a third party.</p></div></div>
+<div id="status" class="card"></div>
+<div class="card"><h2>1. Full backup (recommended)</h2>
+  <p>On the office computer that has this project installed, open a terminal in the project folder and run:</p>
+  <p><code>npm run backup</code></p>
+  <p>It saves a dated <code>.sql</code> file in the <code>backups</code> folder and keeps the newest 12. This is the file you would restore from. Copy it to a USB drive or a second computer.</p></div>
+<div class="card"><h2>2. Quick download (no setup)</h2>
+  <p>Downloads all data as a single JSON file to this computer. It is easy to read, but it is a convenience copy; the full backup above is the one to rely on.</p>
+  <button id="dl_btn" class="btn" type="button">Download backup file</button><div id="dl_msg" role="alert" hidden></div></div>
+<div class="card"><h2>Keep it safe</h2><p>Backup files contain residents’ names, addresses, payments and staff password hashes. Keep them in a locked folder or on an encrypted drive, make a copy at least weekly, and keep copies in two places.</p></div>
+</main></body></html>

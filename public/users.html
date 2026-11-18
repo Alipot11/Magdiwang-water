@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounts · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/users.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>Staff accounts</h1><p>Each barangay has one active treasurer and any number of backup staff.</p></div></div>
+<form id="user_form" class="card"><h2 id="form_title">Create an account</h2><input type="hidden" id="user_id">
+  <div class="form-grid">
+    <div class="field"><label for="username">Username</label><input id="username" maxlength="50" required></div>
+    <div class="field"><label for="full_name">Full name</label><input id="full_name" maxlength="100" required></div>
+    <div class="field"><label for="role">Role</label><select id="role"><option value="treasurer">Treasurer</option><option value="staff">Staff (backup)</option><option value="admin">Admin</option></select></div>
+    <div class="field" id="brgy_field"><label for="barangay">Barangay</label><select id="barangay"></select></div>
+    <div class="field"><label for="password" id="pw_label">Password</label><div class="row"><div class="grow"><input id="password" type="password" autocomplete="new-password"></div><button id="toggle_pw" class="btn secondary" type="button">Show</button></div>
+      <span class="small muted">12+ characters with upper, lower, number and symbol. Leave empty when editing to keep the current one.</span></div>
+  </div>
+  <div class="row"><button class="btn" id="save_btn" type="submit">Create account</button><button class="btn secondary" id="cancel_btn" type="button" hidden>Cancel edit</button></div>
+  <div id="user_msg" role="alert" hidden></div></form>
+<div class="card"><h2>All accounts</h2><div id="list"></div></div>
+</main></body></html>

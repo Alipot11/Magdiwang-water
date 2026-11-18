@@ -1,0 +1,33 @@
+{
+  "name": "magdiwang-water-system",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Magdiwang Water Supply System (Cloudflare Workers + D1)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:local": "wrangler d1 migrations apply DB --local && node scripts/make-seed.mjs && wrangler d1 execute DB --local --file=seed/staging-seed.sql",
+    "migrate:staging": "wrangler d1 migrations apply DB --env staging --remote",
+    "migrate:production": "wrangler d1 migrations apply DB --remote",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy",
+    "seed:staging": "node scripts/make-seed.mjs && wrangler d1 execute DB --env staging --remote --file=seed/staging-seed.sql",
+    "backup": "node scripts/backup.mjs",
+    "backup:staging": "node scripts/backup.mjs --staging",
+    "check": "node scripts/check-js.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261103.1": true
+  }
+}

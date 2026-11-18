@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/dashboard.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>Dashboard</h1><p id="scope_text"></p></div>
+  <div id="brgy_filter_wrap" hidden><label for="brgy_filter">Barangay</label><select id="brgy_filter"></select></div></div>
+<div id="backup_warn" hidden></div>
+<div id="cards" class="grid cols-3"></div>
+<div class="grid cols-2">
+  <div class="card"><h2>Billed vs collected, last 12 months</h2><div id="chart_months"></div></div>
+  <div class="card"><h2>Collections this month, by day</h2><div id="chart_daily"></div></div>
+  <div class="card"><h2>Water consumption (m³), last 12 months</h2><div id="chart_use"></div></div>
+  <div class="card"><h2>My activity this month</h2><div id="mine"></div><div id="chart_mine"></div></div>
+</div>
+<div id="barangay_card" class="card" hidden><h2>By barangay (this month)</h2><div id="barangay_table"></div></div>
+<div class="card"><h2>Largest overdue balances</h2><div id="overdue_table"></div></div>
+</main></body></html>

@@ -1,0 +1,39 @@
+# Magdiwang Water Supply System
+# Top-level config = PRODUCTION. [env.staging] = separate Worker + separate D1 database.
+# Replace the REPLACE_WITH_... ids after running `wrangler d1 create` (see README).
+
+name = "magdiwang-water"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[vars]
+ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "magdiwang-water-prod"
+database_id = "REPLACE_WITH_PRODUCTION_DATABASE_ID"
+migrations_dir = "migrations"
+
+# ---------- STAGING ----------
+[env.staging]
+name = "magdiwang-water-staging"
+
+[env.staging.assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "magdiwang-water-staging"
+database_id = "1673016e-d06b-4a0c-bcac-eb2af6f559c4"
+migrations_dir = "migrations"

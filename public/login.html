@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff login · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/login.js"></script></head>
+<body><div class="login-wrap">
+<h1>Magdiwang Water Supply System</h1><p class="muted">Staff login</p>
+<form id="login_form" class="card">
+  <div class="field"><label for="username">Username</label><input id="username" autocomplete="username" required></div>
+  <div class="field"><label for="password">Password</label>
+    <div class="row"><div class="grow"><input id="password" type="password" autocomplete="current-password" required></div>
+    <button id="toggle_pw" class="btn secondary" type="button">Show</button></div></div>
+  <button class="btn" type="submit">Log in</button>
+  <div id="login_msg" role="alert" hidden></div>
+</form>
+<p><a href="/">← Resident account lookup</a></p>
+</div></body></html>
