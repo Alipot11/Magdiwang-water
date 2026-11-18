@@ -44,6 +44,11 @@ function start() {
           { label: 'Amount', num: true, render: (p) => peso(p.amount_paid) }, { label: 'Received by', key: 'received_by' },
           { label: 'Status', render: (p) => (p.voided_at ? h('span', { class: 'badge void', title: p.void_reason, text: 'VOID' }) : h('span', { class: 'badge paid', text: 'Valid' })) },
           { label: '', render: (p) => h('div', { class: 'actions' }, h('a', { class: 'btn small secondary', href: `/receipt.html?id=${p.payment_id}`, text: 'Receipt' }),
+          !p.voided_at && c.phone && c.sms_opt_in
+            ? (['submitted', 'delivered'].includes(p.sms_status)
+                ? h('span', { class: 'badge paid', text: 'SMS sent' })
+                : h('button', { class: 'btn small secondary', type: 'button', text: p.sms_status ? 'Retry SMS' : 'Send SMS', onclick: (e) => sendReceiptSms(e.target, p, id) }))
+            : null,
             p.voided_at ? null : h('button', { class: 'btn small danger', type: 'button', text: 'Void', onclick: () => voidPayment(p, id) })) }],
           d.payments, 'No payments yet.')));
     } catch (err) { showMsg(msg, err.message); }
@@ -78,4 +83,17 @@ function start() {
     try { await api(`/payments/${p.payment_id}/void`, { method: 'POST', body: { reason: reason.trim() } }); await openAccount(meterId); showMsg(msg, `Receipt ${p.receipt_no} voided.`, 'ok'); }
     catch (err) { showMsg(msg, err.message); }
   }
+
+  async function sendReceiptSms(btn, p, meterId) {
+  if (!confirm(`Text receipt ${p.receipt_no} to this customer?`)) return;
+  btn.disabled = true;
+  try {
+    await api(`/payments/${p.payment_id}/sms`, { method: 'POST' });
+    await openAccount(meterId);
+    showMsg(msg, `SMS for ${p.receipt_no} was submitted. The phone will send it shortly.`, 'ok');
+  } catch (err) {
+    await openAccount(meterId);
+    showMsg(msg, err.message);
+  }
+}
 }

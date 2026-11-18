@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normName, cleanText, parseMeterId, parseWholePesos, isDate, isPeriod, todayPH, lastPeriods } from '../src/lib/util.js';
+import { normName, cleanText, parseMeterId, parseWholePesos, parsePhone, isDate, isPeriod, todayPH, lastPeriods } from '../src/lib/util.js';
 import { hashPassword, verifyPassword, passwordProblem, DUMMY_HASH } from '../src/lib/password.js';
 
 test('normName ignores case, accents and extra spaces', () => {
@@ -53,4 +53,9 @@ test('password hashing', async () => {
 test('password strength rules', () => {
   assert.equal(passwordProblem('Correct-Horse-9!'), null);
   for (const bad of ['short1!A', 'alllowercase123!', 'ALLUPPERCASE123!', 'NoNumbersHere!!', 'NoSymbolsHere123']) assert.ok(passwordProblem(bad), bad);
+});
+
+test('Philippine mobile numbers', () => {
+  for (const ok of ['09171234567', '+639171234567', '639171234567', '0917 123 4567', '0917-123-4567']) assert.equal(parsePhone(ok), '+639171234567', ok);
+  for (const bad of ['0817123456', '091712345678', '+14155550123', '12345', '', null, 9171234567]) assert.equal(parsePhone(bad), null, String(bad));
 });

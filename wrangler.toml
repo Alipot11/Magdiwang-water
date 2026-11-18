@@ -13,6 +13,8 @@ run_worker_first = ["/api/*"]
 
 [vars]
 ENVIRONMENT = "production"
+SMS_ENABLED = "false"
+SMS_GATEWAY_URL = "https://api.sms-gate.app/3rdparty/v1"
 
 [[d1_databases]]
 binding = "DB"
@@ -31,6 +33,8 @@ run_worker_first = ["/api/*"]
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
+SMS_ENABLED = "true"
+SMS_GATEWAY_URL = "https://api.sms-gate.app/3rdparty/v1"
 
 [[env.staging.d1_databases]]
 binding = "DB"

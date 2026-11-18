@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { ALL_STAFF } from '../middleware.js';
 import { fail, readJson, parseId, parseWholePesos, isDate, todayPH, scopeBarangay, cleanText } from '../lib/util.js';
+import { auditStmt } from '../lib/util.js';   // or add auditStmt to your existing util import
+import { sendSms, paymentMessage } from '../lib/sms.js';
 
 const payments = new Hono();
 payments.use('*', ALL_STAFF);
@@ -30,7 +32,7 @@ payments.post('/', async (c) => {
     db.prepare('INSERT OR IGNORE INTO receipt_counters (year, last_no) VALUES (?, 0)').bind(year),
     db.prepare(
       `INSERT INTO payments (receipt_no, bill_id, payment_date, amount_paid, created_by)
-       SELECT 'OR-' || ?1 || '-' || printf('%06d', rc.last_no + 1), b.bill_id, ?2, ?3, ?4
+       SELECT 'OR-' || CAST(?1 AS INTEGER) || '-' || printf('%06d', rc.last_no + 1), b.bill_id, ?2, ?3, ?4
        FROM bills b
        JOIN customers c ON c.meter_id = b.meter_id
        JOIN receipt_counters rc ON rc.year = ?1
@@ -40,7 +42,7 @@ payments.post('/', async (c) => {
     db.prepare(
       `UPDATE receipt_counters SET last_no = last_no + 1
        WHERE year = ?1 AND EXISTS (
-         SELECT 1 FROM payments WHERE receipt_no = 'OR-' || ?1 || '-' || printf('%06d', receipt_counters.last_no + 1))`
+       SELECT 1 FROM payments WHERE receipt_no = 'OR-' || CAST(?1 AS INTEGER) || '-' || printf('%06d', receipt_counters.last_no + 1))`
     ).bind(year),
   ]);
 
@@ -74,6 +76,55 @@ payments.post('/:id/void', async (c) => {
   ).bind(user.user_id, reason, id, scope).run();
   if (res.meta.changes === 0) return fail(c, 404, 'Payment not found, or it is already voided.');
   return c.json({ success: true });
+});
+
+// Manual SMS for a receipt. One SMS row per payment; failed attempts can be retried.
+payments.post('/:id/sms', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return fail(c, 400, 'Invalid payment.');
+  const db = c.env.DB;
+  const user = c.get('user');
+  const scope = scopeBarangay(user, null);
+
+  const p = await db.prepare(
+    `SELECT pd.payment_id, pd.receipt_no, pd.amount_paid, pd.billing_period, pd.meter_id, pd.voided_at,
+            bb.balance AS bill_balance, c.first_name, c.last_name, c.phone, c.sms_opt_in
+     FROM payment_details pd
+     JOIN bill_balances bb ON bb.bill_id = pd.bill_id
+     JOIN customers c ON c.meter_id = pd.meter_id
+     WHERE pd.payment_id = ? AND (? IS NULL OR pd.barangay = ?)`
+  ).bind(id, scope, scope).first();
+  if (!p) return fail(c, 404, 'Receipt not found.');
+  if (p.voided_at) return fail(c, 400, 'A voided receipt cannot be texted.');
+  if (!p.phone) return fail(c, 400, 'This customer has no mobile number on file.');
+  if (!p.sms_opt_in) return fail(c, 400, 'This customer has not agreed to receive SMS.');
+
+  const body = paymentMessage(p);
+  // Create the row if needed, then "claim" it. The claim fails if the SMS is already sent,
+  // or if another send started within the last minute, so a double click cannot text twice.
+  const [, claim] = await db.batch([
+    db.prepare(`INSERT OR IGNORE INTO sms_outbox (meter_id, phone, kind, payment_id, body, created_by)
+                VALUES (?, ?, 'payment', ?, ?, ?)`).bind(p.meter_id, p.phone, id, body, user.user_id),
+    db.prepare(`UPDATE sms_outbox SET phone = ?1, body = ?2, status = 'pending', attempts = attempts + 1, error = NULL, updated_at = datetime('now')
+                WHERE payment_id = ?3 AND (status IN ('failed','error')
+                      OR (status = 'pending' AND (updated_at IS NULL OR updated_at < datetime('now', '-1 minute'))))`).bind(p.phone, body, id),
+  ]);
+  if (claim.meta.changes === 0) {
+    const cur = await db.prepare('SELECT status FROM sms_outbox WHERE payment_id = ?').bind(id).first();
+    return fail(c, 409, ['submitted', 'delivered'].includes(cur?.status)
+      ? 'This receipt was already texted.' : 'A send is already in progress. Try again in a minute.');
+  }
+
+  const r = await sendSms(c.env, p.phone, body);
+  const row = await db.prepare('SELECT sms_id FROM sms_outbox WHERE payment_id = ?').bind(id).first();
+  await db.batch([
+    r.ok
+      ? db.prepare(`UPDATE sms_outbox SET status = 'submitted', gateway_message_id = ?, error = NULL, sent_at = datetime('now'), updated_at = datetime('now') WHERE sms_id = ?`).bind(r.id, row.sms_id)
+      : db.prepare(`UPDATE sms_outbox SET status = 'error', error = ?, updated_at = datetime('now') WHERE sms_id = ?`).bind(r.error, row.sms_id),
+    auditStmt(db, { userId: user.user_id, meterId: p.meter_id, first: p.first_name, last: p.last_name, action: 'SMS', table: 'sms_outbox', recordId: row.sms_id,
+      description: `Receipt ${p.receipt_no} SMS ${r.ok ? 'submitted to the gateway' : 'not sent: ' + r.error}` }),
+  ]);
+  return r.ok ? c.json({ success: true, status: 'submitted' }) : fail(c, 502, r.error);
 });
 
 // Data for the printable receipt.

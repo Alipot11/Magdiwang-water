@@ -16,6 +16,12 @@ export function cleanText(v, { min = 1, max = 100, multiline = false } = {}) {
   return s;
 }
 
+export function parsePhone(v) {
+  if (typeof v !== 'string') return null;
+  const m = v.replace(/[\s-]/g, '').match(/^(?:\+?63|0)(9\d{9})$/);
+  return m ? `+63${m[1]}` : null;
+}
+
 export function parseMeterId(v) {
   if (typeof v === 'number') v = String(v);
   if (typeof v !== 'string' || !/^\d{1,10}$/.test(v.trim())) return null;

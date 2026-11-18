@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { ALL_STAFF, ADMIN_ONLY } from '../middleware.js';
 import { BARANGAYS } from '../lib/constants.js';
-import { fail, readJson, cleanText, parseMeterId, normName, scopeBarangay, auditStmt } from '../lib/util.js';
+import { fail, readJson, cleanText, parseMeterId, parsePhone, normName, scopeBarangay, auditStmt } from '../lib/util.js';
 
 const customers = new Hono();
 
@@ -12,7 +12,15 @@ function validate(body) {
   if (!first_name || !last_name) return { error: 'Enter the first and last name (up to 100 characters each).' };
   if (!BARANGAYS.includes(body.barangay)) return { error: 'Choose a barangay.' };
   if (!sitio) return { error: 'Enter the sitio (up to 100 characters).' };
-  return { value: { first_name, last_name, barangay: body.barangay, sitio } };
+    const rawPhone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  let phone = null;
+  if (rawPhone) {
+    phone = parsePhone(rawPhone);
+    if (!phone) return { error: 'Enter a Philippine mobile number such as 09171234567.' };
+  }
+  const sms_opt_in = body.sms_opt_in === true ? 1 : 0;
+  if (sms_opt_in && !phone) return { error: 'Enter a mobile number to turn on SMS, or untick the SMS box.' };
+  return { value: { first_name, last_name, barangay: body.barangay, sitio, phone, sms_opt_in } };
 }
 
 customers.get('/', ALL_STAFF, async (c) => {
@@ -33,7 +41,7 @@ customers.get('/', ALL_STAFF, async (c) => {
     params.push(like, like, like);
   }
   const { results } = await c.env.DB.prepare(
-    `SELECT c.meter_id, c.first_name, c.last_name, c.barangay, c.sitio, c.is_active, COALESCE(bb.balance, 0) AS balance
+    `SELECT c.meter_id, c.first_name, c.last_name, c.barangay, c.sitio, c.phone, c.sms_opt_in, c.is_active, COALESCE(bb.balance, 0) AS balance
      FROM customers c
      LEFT JOIN (SELECT meter_id, SUM(balance) AS balance FROM bill_balances GROUP BY meter_id) bb ON bb.meter_id = c.meter_id
      WHERE ${where.join(' AND ')}
@@ -48,10 +56,11 @@ customers.get('/:id', ALL_STAFF, async (c) => {
   const db = c.env.DB;
   const scope = scopeBarangay(c.get('user'), null);
   const [cust, bills, payments] = await db.batch([
-    db.prepare('SELECT meter_id, first_name, last_name, barangay, sitio, is_active FROM customers WHERE meter_id = ? AND (? IS NULL OR barangay = ?)').bind(id, scope, scope),
+    db.prepare('SELECT meter_id, first_name, last_name, barangay, sitio,phone, sms_opt_in, is_active FROM customers WHERE meter_id = ? AND (? IS NULL OR barangay = ?)').bind(id, scope, scope),
     db.prepare('SELECT * FROM bill_balances WHERE meter_id = ? ORDER BY billing_period DESC LIMIT 36').bind(id),
-    db.prepare(`SELECT payment_id, receipt_no, payment_date, amount_paid, billing_period, bill_id, received_by, voided_at, void_reason
-                FROM payment_details WHERE meter_id = ? ORDER BY payment_id DESC LIMIT 60`).bind(id),
+    db.prepare(`SELECT payment_id, receipt_no, payment_date, amount_paid, billing_period, bill_id, received_by, voided_at, void_reason,
+                   (SELECT s.status FROM sms_outbox s WHERE s.payment_id = payment_details.payment_id) AS sms_status
+            FROM payment_details WHERE meter_id = ? ORDER BY payment_id DESC LIMIT 60`).bind(id),
   ]);
   if (!cust.results.length) return fail(c, 404, 'Account not found.');
   return c.json({ success: true, customer: cust.results[0], bills: bills.results, payments: payments.results });
@@ -63,12 +72,12 @@ customers.post('/', ADMIN_ONLY, async (c) => {
   if (!body || !meter) return fail(c, 400, 'Enter a valid meter number.');
   const v = validate(body);
   if (v.error) return fail(c, 400, v.error);
-  const { first_name, last_name, barangay, sitio } = v.value;
+  const { first_name, last_name, barangay, sitio, phone, sms_opt_in } = v.value;
   const db = c.env.DB;
   try {
     await db.batch([
-      db.prepare(`INSERT INTO customers (meter_id, first_name, last_name, first_name_norm, last_name_norm, barangay, sitio)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(meter, first_name, last_name, normName(first_name), normName(last_name), barangay, sitio),
+       db.prepare(`INSERT INTO customers (meter_id, first_name, last_name, first_name_norm, last_name_norm, barangay, sitio, phone, sms_opt_in)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(meter, first_name, last_name, normName(first_name), normName(last_name), barangay, sitio, phone, sms_opt_in),
       auditStmt(db, { userId: c.get('user').user_id, meterId: meter, first: first_name, last: last_name, action: 'CREATE',
         table: 'customers', recordId: meter, description: `Customer account created for meter ${meter} (${barangay})` }),
     ]);
@@ -85,9 +94,9 @@ customers.put('/:id', ADMIN_ONLY, async (c) => {
   if (!id || !body) return fail(c, 400, 'Invalid request.');
   const v = validate(body);
   if (v.error) return fail(c, 400, v.error);
-  const { first_name, last_name, barangay, sitio } = v.value;
+  const { first_name, last_name, barangay, sitio, phone, sms_opt_in } = v.value;
   const db = c.env.DB;
-  const old = await db.prepare('SELECT first_name, last_name, barangay, sitio FROM customers WHERE meter_id = ?').bind(id).first();
+  const old = await db.prepare('SELECT first_name, last_name, barangay, sitio, phone, sms_opt_in FROM customers WHERE meter_id = ?').bind(id).first();
   if (!old) return fail(c, 404, 'Customer account not found.');
 
   const changes = [];
@@ -95,11 +104,13 @@ customers.put('/:id', ADMIN_ONLY, async (c) => {
   if (old.last_name !== last_name) changes.push('last name');
   if (old.barangay !== barangay) changes.push('barangay');
   if (old.sitio !== sitio) changes.push('sitio');
+  if (old.phone !== phone) changes.push('phone');
+  if (old.sms_opt_in !== sms_opt_in) changes.push('SMS consent');
   if (!changes.length) return fail(c, 400, 'Nothing was changed.');
 
   await db.batch([
-    db.prepare(`UPDATE customers SET first_name = ?, last_name = ?, first_name_norm = ?, last_name_norm = ?, barangay = ?, sitio = ? WHERE meter_id = ?`)
-      .bind(first_name, last_name, normName(first_name), normName(last_name), barangay, sitio, id),
+    db.prepare(`UPDATE customers SET first_name = ?, last_name = ?, first_name_norm = ?, last_name_norm = ?, barangay = ?, sitio = ?, phone = ?, sms_opt_in = ? WHERE meter_id = ?`)
+      .bind(first_name, last_name, normName(first_name), normName(last_name), barangay, sitio, phone, sms_opt_in, id),
     auditStmt(db, { userId: c.get('user').user_id, meterId: id, first: first_name, last: last_name, action: 'UPDATE', table: 'customers', recordId: id,
       description: `Meter ${id} updated: ${changes.join(', ')}. Was "${old.first_name} ${old.last_name}", ${old.barangay}, ${old.sitio}` }),
   ]);
