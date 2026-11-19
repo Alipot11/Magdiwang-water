@@ -15,6 +15,7 @@ run_worker_first = ["/api/*"]
 ENVIRONMENT = "production"
 SMS_ENABLED = "false"
 SMS_GATEWAY_URL = "https://api.sms-gate.app/3rdparty/v1"
+PORTAL_URL = "https://magdiwang-water-system.pages.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -35,6 +36,7 @@ run_worker_first = ["/api/*"]
 ENVIRONMENT = "staging"
 SMS_ENABLED = "true"
 SMS_GATEWAY_URL = "https://api.sms-gate.app/3rdparty/v1"
+PORTAL_URL = "https://magdiwang-water-system.pages.dev"
 
 [[env.staging.d1_databases]]
 binding = "DB"

@@ -27,9 +27,18 @@ function start() {
   }
 
   const num = (v) => (v === '' ? null : Number(v));
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // "Jul-Aug: 291" = unpaid months (first-last) and the total balance. A single month shows as "Aug: 291".
+  function owedText(r) {
+    if (!r.owed) return '—';
+    const cross = r.owed_from.slice(0, 4) !== r.owed_to.slice(0, 4);   // add the year only when the range spans two years
+    const m = (p) => MON[Number(p.slice(5, 7)) - 1] + (cross ? ` ${p.slice(0, 4)}` : '');
+    return `${r.owed_from === r.owed_to ? m(r.owed_from) : `${m(r.owed_from)}-${m(r.owed_to)}`}: ${r.owed}`;
+  }
+
   function render() {
     f('sheet').replaceChildren(rows.length ? h('div', { class: 'table-wrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, ['Meter', 'Name', 'Barangay', 'Previous', 'Current', 'm³', 'Amount ₱', 'Surcharge ₱', 'Total ₱', ''].map((t) => h('th', { text: t })))),
+      h('thead', {}, h('tr', {}, ['Meter', 'Name', 'Barangay', "Balance", 'Previous Reading', 'Current Reading', 'Cubic Meter (m³)', 'Amount ₱', 'Surcharge ₱', 'Total ₱', ''].map((t) => h('th', { text: t })))),
       h('tbody', {}, rows.map(rowEl)))) : h('div', { class: 'empty', text: 'Nothing to post.' }));
     applyFilter();
   }
@@ -52,6 +61,7 @@ function start() {
     [r.el.curr, r.el.amount, r.el.sur, r.el.pre].forEach((i) => i && i.addEventListener('input', recalc));
     r.tr = h('tr', { 'data-key': `${r.meter_id} ${r.first_name} ${r.last_name}`.toLowerCase() },
       h('td', { text: r.meter_id }), h('td', { text: `${r.first_name} ${r.last_name}` }), h('td', { text: brgy(r.barangay) }),
+      h('td', { class: r.owed ? 'small nowrap bad' : 'small nowrap muted', text: owedText(r) }),
       h('td', { class: 'num' }, r.prev_reading ?? r.el.pre), h('td', {}, r.el.curr), r.el.use, h('td', {}, r.el.amount), h('td', {}, r.el.sur), r.el.total, r.el.status);
     return r.tr;
   }

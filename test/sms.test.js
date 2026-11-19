@@ -4,11 +4,17 @@ import { billMessage, paymentMessage, sendSms } from '../src/lib/sms.js';
 
 const asciiAnd160 = (t) => t.length <= 160 && /^[\x20-\x7e]+$/.test(t);
 
+const asciiAnd306 = (t) => t.length <= 306 && /^[\x20-\x7e]+$/.test(t);   // 2 SMS parts
+
 test('bill SMS text', () => {
-  const t = billMessage({ meter_id: 1001, billing_period: '2026-11', tcmeter: 20, bill_amount: 460, duedate: '2026-12-10' });
-  assert.equal(t, 'Magdiwang Water: Bill for Nov 2026, Meter 1001. Use 20 m3. Total PHP 460. Due Dec 10. Pay at your barangay treasurer.');
-  assert.ok(asciiAnd160(t));
-  assert.ok(asciiAnd160(billMessage({ meter_id: 2147483647, billing_period: '2026-12', tcmeter: 99999, bill_amount: 100000000, duedate: '2027-01-31' })), 'worst case fits one SMS');
+  const portal = 'https://magdiwang-water-system.pages.dev';
+  const b = { first_name: 'Juan', last_name: 'Dela Cruz', meter_id: 123456789, billing_period: '2026-11', bill_amount: 460, duedate: '2026-12-15' };
+  const t = billMessage(b, portal);
+  assert.equal(t, 'Magdiwang Water Supply System: Good day, Juan Dela Cruz! Your Nov 2026 water bill (Meter 123456789) is PHP 460, due 12-15-2026. Kindly pay on or before the due date. From Magdiwang Municipal Treasurer Office. Thank you! Details: https://magdiwang-water-system.pages.dev');
+  assert.ok(asciiAnd306(t));
+  assert.ok(asciiAnd306(billMessage({ ...b, first_name: 'A'.repeat(20), last_name: 'B'.repeat(20), meter_id: 2147483647, bill_amount: 100000000 }, portal)), 'long names still fit 2 parts');
+  assert.ok(!billMessage({ ...b, first_name: 'Niño José' }, portal).match(/[^\x20-\x7e]/), 'accents removed');
+  assert.ok(!billMessage(b).includes('Details:'), 'no link when none is configured');
 });
 
 test('payment SMS text', () => {

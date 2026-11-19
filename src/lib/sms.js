@@ -4,12 +4,17 @@ import { auditStmt } from './util.js';
 // Text is plain ASCII on purpose, so each message stays within one 160-character SMS.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const monthYear = (period) => `${MONTHS[Number(period.slice(5, 7)) - 1]} ${period.slice(0, 4)}`;
-const monthDay = (date) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ${Number(date.slice(8, 10))}`;
+const mdy = (date) => `${date.slice(5, 7)}-${date.slice(8, 10)}-${date.slice(0, 4)}`;   // 2026-12-15 -> 12-15-2026
+// Names keep their letters but lose accents, so the text stays plain GSM characters (no Unicode, no extra parts).
+const plain = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
 const php = (n) => `PHP ${Number(n).toLocaleString('en-US')}`;
 
 // b: a row from bill_balances (meter_id, billing_period, tcmeter, bill_amount, duedate)
-export const billMessage = (b) =>
-  `Magdiwang Water: Bill for ${monthYear(b.billing_period)}, Meter ${b.meter_id}. Use ${b.tcmeter} m3. Total ${php(b.bill_amount)}. Due ${monthDay(b.duedate)}. Pay at your barangay treasurer.`;
+export const billMessage = (b, portal = '') =>
+  `Magdiwang Water Supply System: Good day, ${plain(b.first_name)} ${plain(b.last_name)}! ` +
+  `Your ${monthYear(b.billing_period)} water bill (Meter ${b.meter_id}) is ${php(b.bill_amount)}, due ${mdy(b.duedate)}. ` +
+  `Kindly pay on or before the due date. From Magdiwang Municipal Treasurer Office. Thank you!` +
+  (portal ? ` Details: ${portal}` : '');
 
 // p: a row from payment_details plus bill_balance (meter_id, amount_paid, billing_period, receipt_no, bill_balance)
 export const paymentMessage = (p) =>

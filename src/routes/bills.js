@@ -15,8 +15,11 @@ bills.get('/sheet', ADMIN_ONLY, async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT c.meter_id, c.first_name, c.last_name, c.barangay, c.sitio,
             (SELECT b.curr_reading FROM bills b WHERE b.meter_id = c.meter_id AND b.billing_period < ?1
-             ORDER BY b.billing_period DESC LIMIT 1) AS prev_reading
+             ORDER BY b.billing_period DESC LIMIT 1) AS prev_reading,
+            o.owed, o.owed_from, o.owed_to
      FROM customers c
+     LEFT JOIN (SELECT meter_id, SUM(balance) AS owed, MIN(billing_period) AS owed_from, MAX(billing_period) AS owed_to
+                FROM bill_balances WHERE balance > 0 AND billing_period < ?1 GROUP BY meter_id) o ON o.meter_id = c.meter_id
      WHERE c.is_active = 1 AND (?2 IS NULL OR c.barangay = ?2)
        AND NOT EXISTS (SELECT 1 FROM bills b WHERE b.meter_id = c.meter_id AND b.billing_period = ?1)
      ORDER BY c.barangay, c.last_name_norm, c.first_name_norm LIMIT 500`
@@ -136,7 +139,7 @@ bills.post('/:id/sms', ADMIN_ONLY, async (c) => {
   if (b.balance <= 0) return fail(c, 400, 'This bill is already paid.');
   const out = await sendQueued(c.env.DB, c.env, c.get('user'), {
     kind: 'bill', refId: id, meterId: b.meter_id, first: b.first_name, last: b.last_name,
-    phone: b.phone, body: billMessage(b), what: `Bill #${id}`,
+    phone: b.phone, body: billMessage(b, c.env.PORTAL_URL), what: `Bill #${id}`,
   });
   return out.ok ? c.json({ success: true, status: 'submitted' }) : fail(c, out.code, out.error);
 });
