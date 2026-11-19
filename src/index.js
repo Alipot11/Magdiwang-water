@@ -11,6 +11,7 @@ import analytics from './routes/analytics.js';
 import reports from './routes/reports.js';
 import audit from './routes/audit.js';
 import backup from './routes/backup.js';
+import sms from './routes/sms.js';
 
 const app = new Hono();
 
@@ -34,6 +35,7 @@ app.route('/api/analytics', analytics);
 app.route('/api/reports', reports);
 app.route('/api/audit', audit);
 app.route('/api/backup', backup);
+app.route('/api/sms', sms);
 
 app.notFound((c) => c.json({ success: false, message: 'Not found.' }, 404));
 app.onError((err, c) => {

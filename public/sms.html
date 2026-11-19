@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMS log · Magdiwang Water</title><link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/sms.js"></script></head>
+<body><header id="topbar"></header><main class="page">
+
+<div class="page-head"><div><h1>SMS log</h1><p>Every text sent from this system. Submitted means the gateway accepted it; Refresh asks the gateway what the phone did with it.</p></div>
+<div><label for="status">Status</label><select id="status"><option value="">All</option><option value="pending">Pending</option><option value="submitted">Submitted</option><option value="delivered">Delivered</option><option value="failed">Failed</option><option value="error">Error</option></select></div></div>
+<div class="row"><button id="refresh_all" class="btn" type="button">Refresh submitted (up to 25)</button></div>
+<div id="msg" role="alert" hidden></div><div id="list"></div>
+<div class="row"><button id="prev" class="btn secondary" type="button">Previous</button><span id="page_info" class="muted"></span><button id="next" class="btn secondary" type="button">Next</button></div>
+</main></body></html>

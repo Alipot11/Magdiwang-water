@@ -54,7 +54,7 @@ export async function sendQueued(db, env, user, { kind, refId, meterId, first, l
   const [, claim] = await db.batch([
     db.prepare(`INSERT OR IGNORE INTO sms_outbox (meter_id, phone, kind, ${col}, body, created_by) VALUES (?, ?, ?, ?, ?, ?)`)
       .bind(meterId, phone, kind, refId, body, user.user_id),
-    db.prepare(`UPDATE sms_outbox SET phone = ?1, body = ?2, status = 'pending', attempts = attempts + 1, error = NULL, updated_at = datetime('now')
+    db.prepare(`UPDATE sms_outbox SET phone = ?1, body = ?2, status = 'pending', attempts = attempts + 1, error = NULL, gateway_state = NULL, updated_at = datetime('now')
                 WHERE ${col} = ?3 AND (status IN ('failed','error')
                       OR (status = 'pending' AND (updated_at IS NULL OR updated_at < datetime('now', '-1 minute'))))`).bind(phone, body, refId),
   ]);
@@ -68,10 +68,26 @@ export async function sendQueued(db, env, user, { kind, refId, meterId, first, l
   const row = await db.prepare(`SELECT sms_id FROM sms_outbox WHERE ${col} = ?`).bind(refId).first();
   await db.batch([
     r.ok
-      ? db.prepare(`UPDATE sms_outbox SET status = 'submitted', gateway_message_id = ?, error = NULL, sent_at = datetime('now'), updated_at = datetime('now') WHERE sms_id = ?`).bind(r.id, row.sms_id)
+      ? db.prepare(`UPDATE sms_outbox SET status = 'submitted', gateway_message_id = ?, gateway_state = ?, error = NULL, sent_at = datetime('now'), updated_at = datetime('now') WHERE sms_id = ?`).bind(r.id, r.state, row.sms_id)
       : db.prepare(`UPDATE sms_outbox SET status = 'error', error = ?, updated_at = datetime('now') WHERE sms_id = ?`).bind(r.error, row.sms_id),
     auditStmt(db, { userId: user.user_id, meterId, first, last, action: 'SMS', table: 'sms_outbox', recordId: row.sms_id,
       description: `${what} SMS ${r.ok ? 'submitted to the gateway' : 'not sent: ' + r.error}` }),
   ]);
   return r.ok ? { ok: true } : { ok: false, code: 502, error: r.error };
+}
+
+// Asks the gateway for the current state of a message it accepted earlier.
+export async function getSmsState(env, gatewayId) {
+  if (!env.SMS_GATEWAY_URL || !env.SMS_GATEWAY_USER || !env.SMS_GATEWAY_PASSWORD) return { ok: false, error: 'The SMS gateway is not configured.' };
+  try {
+    const res = await fetch(`${env.SMS_GATEWAY_URL}/message/${encodeURIComponent(gatewayId)}`, {
+      headers: { Authorization: 'Basic ' + btoa(`${env.SMS_GATEWAY_USER}:${env.SMS_GATEWAY_PASSWORD}`) },
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.state) return { ok: false, error: `The gateway could not give the status (HTTP ${res.status}).` };
+    return { ok: true, state: String(data.state) };
+  } catch {
+    return { ok: false, error: 'Could not reach the SMS gateway.' };
+  }
 }

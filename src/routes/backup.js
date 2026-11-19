@@ -5,7 +5,7 @@ import { auditStmt, todayPH } from '../lib/util.js';
 const backup = new Hono();
 backup.use('*', ADMIN_ONLY);
 
-const TABLES = ['customers', 'admin_users', 'bills', 'receipt_counters', 'payments', 'complaints', 'audit_logs', 'app_meta'];
+const TABLES = ['customers', 'admin_users', 'bills', 'receipt_counters', 'payments', 'sms_outbox', 'complaints', 'audit_logs', 'app_meta'];
 
 backup.get('/status', async (c) => {
   const row = await c.env.DB.prepare("SELECT value FROM app_meta WHERE key = 'last_backup_at'").first();

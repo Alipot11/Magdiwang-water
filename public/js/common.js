@@ -61,6 +61,7 @@ const NAV = [
   ['Payments', '/payments.html', ['admin', 'treasurer', 'staff']],
   ['Reports', '/reports.html', ['admin', 'treasurer', 'staff']],
   ['Complaints', '/complaints.html', ['admin']],
+  ['SMS', '/sms.html', ['admin']],
   ['Accounts', '/users.html', ['admin']],
   ['Audit log', '/audit.html', ['admin']],
   ['Backup', '/backup.html', ['admin']],
