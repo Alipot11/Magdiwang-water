@@ -1,4 +1,4 @@
-import { h, api, initPage, showMsg, brgy, barangayOptions, thisMonthPH } from './common.js';
+import { h, api, initPage, showMsg, brgy, barangayOptions, thisMonthPH, peso, table } from './common.js';
 
 const me = await initPage(['admin']);
 if (me) start();
@@ -83,5 +83,53 @@ function start() {
     showMsg(box, `${posted} bill(s) posted.${problems.length ? ` ${problems.length} need attention:` : ''}`, problems.length ? 'warn' : 'ok');
     if (problems.length) box.append(h('ul', {}, problems.map((p) => h('li', { text: p }))));
     await loadSheet(true);
+  });
+
+    // ---- manual bill SMS ----
+  let smsBills = [], stop = false;
+  const texted = (b) => ['submitted', 'delivered'].includes(b.sms_status);
+  const waiting = (b) => b.phone && b.sms_opt_in && b.balance > 0 && !texted(b);
+  const smsCell = (b) => (!b.phone ? 'No number' : !b.sms_opt_in ? 'Not agreed' : texted(b) ? h('span', { class: 'badge paid', text: 'Sent' })
+    : b.balance <= 0 ? 'Paid' : b.sms_status ? h('span', { class: 'badge warn', text: 'Retry' }) : 'Waiting');
+
+  async function loadSms(keepMsg = false) {
+    if (!keepMsg) showMsg(f('sms_msg'), '');
+    try {
+      const d = await api(`/bills/sms?period=${f('period').value}&barangay=${encodeURIComponent(f('brgy').value)}`);
+      smsBills = d.bills;
+      const n = smsBills.filter(waiting).length;
+      f('sms_panel').hidden = false;
+      f('sms_progress').textContent = `${smsBills.length} bills, ${n} waiting to be texted.`;
+      f('sms_send_all').disabled = n === 0;
+      f('sms_list').replaceChildren(table([
+        { label: 'Meter', key: 'meter_id' }, { label: 'Name', render: (b) => `${b.first_name} ${b.last_name}` }, { label: 'Barangay', render: (b) => brgy(b.barangay) },
+        { label: 'Total', num: true, render: (b) => peso(b.bill_amount) }, { label: 'Balance', num: true, render: (b) => peso(b.balance) },
+        { label: 'SMS', render: smsCell }], smsBills, 'No bills for this month.'));
+    } catch (err) { showMsg(f('sms_msg'), err.message); }
+  }
+  f('sms_load').addEventListener('click', () => loadSms());
+  f('sms_stop').addEventListener('click', () => { stop = true; });
+
+  f('sms_send_all').addEventListener('click', async () => {
+    const todo = smsBills.filter(waiting);
+    if (!todo.length) return;
+    if (!confirm(`Text ${todo.length} customer(s) their bill for ${f('period').value}? Keep this page open until it finishes.`)) return;
+    stop = false; f('sms_send_all').disabled = true; f('sms_stop').hidden = false;
+    let ok = 0, streak = 0; const problems = [];
+    for (const [i, b] of todo.entries()) {
+      if (stop) break;
+      f('sms_progress').textContent = `Sending ${i + 1} of ${todo.length}...`;
+      try { await api(`/bills/${b.bill_id}/sms`, { method: 'POST' }); ok++; streak = 0; }
+      catch (err) {
+        problems.push(`Meter ${b.meter_id}: ${err.message}`);
+        if (++streak >= 3) { problems.push('Stopped after 3 failures in a row.'); break; }
+      }
+      if (i < todo.length - 1 && !stop) await new Promise((r) => setTimeout(r, 4000));
+    }
+    f('sms_stop').hidden = true;
+    const box = f('sms_msg');
+    showMsg(box, `${ok} submitted.${stop ? ' Stopped early.' : ''}${problems.length ? ` ${problems.length} need attention:` : ''}`, problems.length ? 'warn' : 'ok');
+    if (problems.length) box.append(h('ul', {}, problems.map((p) => h('li', { text: p }))));
+    await loadSms(true);
   });
 }

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { ADMIN_ONLY, ALL_STAFF } from '../middleware.js';
 import { BARANGAYS } from '../lib/constants.js';
+import { sendQueued, billMessage } from '../lib/sms.js';
 import { fail, readJson, parseMeterId, parseId, parseWholePesos, isDate, isPeriod, scopeBarangay } from '../lib/util.js';
 
 const bills = new Hono();
@@ -102,6 +103,42 @@ bills.get('/print', ALL_STAFF, async (c) => {
   } else return fail(c, 400, 'Choose a bill or a billing month.');
   const { results } = await stmt.all();
   return c.json({ success: true, bills: results });
+});
+
+// Bills of a month with each customer's SMS status (for the "Send bill SMS" panel).
+bills.get('/sms', ADMIN_ONLY, async (c) => {
+  const period = c.req.query('period');
+  if (!isPeriod(period)) return fail(c, 400, 'Choose a billing month.');
+  const barangay = BARANGAYS.includes(c.req.query('barangay')) ? c.req.query('barangay') : null;
+  const { results } = await c.env.DB.prepare(
+    `SELECT bb.bill_id, bb.meter_id, bb.bill_amount, bb.balance, c.first_name, c.last_name, c.barangay, c.phone, c.sms_opt_in, s.status AS sms_status
+     FROM bill_balances bb
+     JOIN customers c ON c.meter_id = bb.meter_id
+     LEFT JOIN sms_outbox s ON s.bill_id = bb.bill_id
+     WHERE bb.billing_period = ?1 AND (?2 IS NULL OR c.barangay = ?2)
+     ORDER BY c.barangay, c.last_name_norm, c.first_name_norm LIMIT 300`
+  ).bind(period, barangay).all();
+  return c.json({ success: true, bills: results });
+});
+
+// Manual SMS for one bill.
+bills.post('/:id/sms', ADMIN_ONLY, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return fail(c, 400, 'Invalid bill.');
+  const b = await c.env.DB.prepare(
+    `SELECT bb.bill_id, bb.meter_id, bb.billing_period, bb.tcmeter, bb.bill_amount, bb.duedate, bb.balance,
+            c.first_name, c.last_name, c.phone, c.sms_opt_in
+     FROM bill_balances bb JOIN customers c ON c.meter_id = bb.meter_id WHERE bb.bill_id = ?`
+  ).bind(id).first();
+  if (!b) return fail(c, 404, 'Bill not found.');
+  if (!b.phone) return fail(c, 400, 'This customer has no mobile number on file.');
+  if (!b.sms_opt_in) return fail(c, 400, 'This customer has not agreed to receive SMS.');
+  if (b.balance <= 0) return fail(c, 400, 'This bill is already paid.');
+  const out = await sendQueued(c.env.DB, c.env, c.get('user'), {
+    kind: 'bill', refId: id, meterId: b.meter_id, first: b.first_name, last: b.last_name,
+    phone: b.phone, body: billMessage(b), what: `Bill #${id}`,
+  });
+  return out.ok ? c.json({ success: true, status: 'submitted' }) : fail(c, out.code, out.error);
 });
 
 export default bills;

@@ -1,3 +1,5 @@
+import { auditStmt } from './util.js';
+
 // SMS helper: builds the message text and sends ONE message through the SMSGate cloud API.
 // Text is plain ASCII on purpose, so each message stays within one 160-character SMS.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -41,4 +43,35 @@ export async function sendSms(env, phone, text) {
   } catch {
     return { ok: false, error: 'Could not reach the SMS gateway.' };
   }
+}
+
+// Shared by receipts and bills. kind = 'payment' | 'bill'; refId = payment_id | bill_id.
+// Returns { ok: true } or { ok: false, code, error }.
+export async function sendQueued(db, env, user, { kind, refId, meterId, first, last, phone, body, what }) {
+  const col = kind === 'bill' ? 'bill_id' : 'payment_id';   // fixed names, never user input
+  // Create the row if needed, then "claim" it. The claim fails if the SMS is already sent, or if another
+  // send started within the last minute, so a double click cannot text twice.
+  const [, claim] = await db.batch([
+    db.prepare(`INSERT OR IGNORE INTO sms_outbox (meter_id, phone, kind, ${col}, body, created_by) VALUES (?, ?, ?, ?, ?, ?)`)
+      .bind(meterId, phone, kind, refId, body, user.user_id),
+    db.prepare(`UPDATE sms_outbox SET phone = ?1, body = ?2, status = 'pending', attempts = attempts + 1, error = NULL, updated_at = datetime('now')
+                WHERE ${col} = ?3 AND (status IN ('failed','error')
+                      OR (status = 'pending' AND (updated_at IS NULL OR updated_at < datetime('now', '-1 minute'))))`).bind(phone, body, refId),
+  ]);
+  if (claim.meta.changes === 0) {
+    const cur = await db.prepare(`SELECT status FROM sms_outbox WHERE ${col} = ?`).bind(refId).first();
+    return { ok: false, code: 409, error: ['submitted', 'delivered'].includes(cur?.status)
+      ? `${what} was already texted.` : 'A send is already in progress. Try again in a minute.' };
+  }
+
+  const r = await sendSms(env, phone, body);
+  const row = await db.prepare(`SELECT sms_id FROM sms_outbox WHERE ${col} = ?`).bind(refId).first();
+  await db.batch([
+    r.ok
+      ? db.prepare(`UPDATE sms_outbox SET status = 'submitted', gateway_message_id = ?, error = NULL, sent_at = datetime('now'), updated_at = datetime('now') WHERE sms_id = ?`).bind(r.id, row.sms_id)
+      : db.prepare(`UPDATE sms_outbox SET status = 'error', error = ?, updated_at = datetime('now') WHERE sms_id = ?`).bind(r.error, row.sms_id),
+    auditStmt(db, { userId: user.user_id, meterId, first, last, action: 'SMS', table: 'sms_outbox', recordId: row.sms_id,
+      description: `${what} SMS ${r.ok ? 'submitted to the gateway' : 'not sent: ' + r.error}` }),
+  ]);
+  return r.ok ? { ok: true } : { ok: false, code: 502, error: r.error };
 }

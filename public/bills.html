@@ -14,4 +14,11 @@
     <button class="btn" id="post_btn" type="button">Post filled bills</button><a class="btn secondary" id="print_link" href="#" target="_blank">Print bills for this month</a></div>
   <p class="small muted">Only rows with a current reading are posted. A customer’s first-ever bill also needs a previous (starting) reading.</p>
   <div id="post_msg" role="alert" hidden></div><div id="sheet"></div></div>
+<div class="card"><h2>Send bill SMS</h2>
+  <p class="small muted">Uses the billing month and barangay chosen above. Texts go out one at a time, a few seconds apart, so keep this page open until it finishes. Only customers with a mobile number who agreed to SMS are included.</p>
+  <button class="btn secondary" id="sms_load" type="button">Show bills for this month</button>
+  <div id="sms_msg" role="alert" hidden></div>
+  <div id="sms_panel" hidden>
+    <div class="row"><button class="btn" id="sms_send_all" type="button">Send SMS to all waiting</button><button class="btn secondary" id="sms_stop" type="button" hidden>Stop</button></div>
+    <p id="sms_progress" class="small muted"></p><div id="sms_list"></div></div></div>
 </main></body></html>

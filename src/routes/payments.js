@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
 import { ALL_STAFF } from '../middleware.js';
 import { fail, readJson, parseId, parseWholePesos, isDate, todayPH, scopeBarangay, cleanText } from '../lib/util.js';
-import { auditStmt } from '../lib/util.js';   // or add auditStmt to your existing util import
-import { sendSms, paymentMessage } from '../lib/sms.js';
+import { sendQueued, paymentMessage } from '../lib/sms.js';
 
 const payments = new Hono();
 payments.use('*', ALL_STAFF);
@@ -99,32 +98,11 @@ payments.post('/:id/sms', async (c) => {
   if (!p.phone) return fail(c, 400, 'This customer has no mobile number on file.');
   if (!p.sms_opt_in) return fail(c, 400, 'This customer has not agreed to receive SMS.');
 
-  const body = paymentMessage(p);
-  // Create the row if needed, then "claim" it. The claim fails if the SMS is already sent,
-  // or if another send started within the last minute, so a double click cannot text twice.
-  const [, claim] = await db.batch([
-    db.prepare(`INSERT OR IGNORE INTO sms_outbox (meter_id, phone, kind, payment_id, body, created_by)
-                VALUES (?, ?, 'payment', ?, ?, ?)`).bind(p.meter_id, p.phone, id, body, user.user_id),
-    db.prepare(`UPDATE sms_outbox SET phone = ?1, body = ?2, status = 'pending', attempts = attempts + 1, error = NULL, updated_at = datetime('now')
-                WHERE payment_id = ?3 AND (status IN ('failed','error')
-                      OR (status = 'pending' AND (updated_at IS NULL OR updated_at < datetime('now', '-1 minute'))))`).bind(p.phone, body, id),
-  ]);
-  if (claim.meta.changes === 0) {
-    const cur = await db.prepare('SELECT status FROM sms_outbox WHERE payment_id = ?').bind(id).first();
-    return fail(c, 409, ['submitted', 'delivered'].includes(cur?.status)
-      ? 'This receipt was already texted.' : 'A send is already in progress. Try again in a minute.');
-  }
-
-  const r = await sendSms(c.env, p.phone, body);
-  const row = await db.prepare('SELECT sms_id FROM sms_outbox WHERE payment_id = ?').bind(id).first();
-  await db.batch([
-    r.ok
-      ? db.prepare(`UPDATE sms_outbox SET status = 'submitted', gateway_message_id = ?, error = NULL, sent_at = datetime('now'), updated_at = datetime('now') WHERE sms_id = ?`).bind(r.id, row.sms_id)
-      : db.prepare(`UPDATE sms_outbox SET status = 'error', error = ?, updated_at = datetime('now') WHERE sms_id = ?`).bind(r.error, row.sms_id),
-    auditStmt(db, { userId: user.user_id, meterId: p.meter_id, first: p.first_name, last: p.last_name, action: 'SMS', table: 'sms_outbox', recordId: row.sms_id,
-      description: `Receipt ${p.receipt_no} SMS ${r.ok ? 'submitted to the gateway' : 'not sent: ' + r.error}` }),
-  ]);
-  return r.ok ? c.json({ success: true, status: 'submitted' }) : fail(c, 502, r.error);
+    const out = await sendQueued(db, c.env, user, {
+    kind: 'payment', refId: id, meterId: p.meter_id, first: p.first_name, last: p.last_name,
+    phone: p.phone, body: paymentMessage(p), what: `Receipt ${p.receipt_no}`,
+  });
+  return out.ok ? c.json({ success: true, status: 'submitted' }) : fail(c, out.code, out.error);
 });
 
 // Data for the printable receipt.
