@@ -1,4 +1,4 @@
-import { h, api, initPage, showMsg, brgy, peso, fmtDate, fmtPeriod, todayPH, statusBadge, table } from './common.js';
+import { h, api, initPage, showMsg, brgy, address, peso, fmtDate, fmtPeriod, todayPH, statusBadge, table } from './common.js';
 
 const me = await initPage(['admin', 'treasurer', 'staff']);
 if (me) start();
@@ -14,7 +14,7 @@ function start() {
       const d = await api(`/customers?q=${encodeURIComponent(f('q').value)}`);
       f('results').replaceChildren(h('div', { class: 'card' }, table([
         { label: 'Meter', key: 'meter_id' }, { label: 'Name', render: (r) => `${r.first_name} ${r.last_name}` },
-        { label: 'Address', render: (r) => `${brgy(r.barangay)}, ${r.sitio}` }, { label: 'Balance', num: true, render: (r) => peso(r.balance) },
+        { label: 'Address', render: (r) => address(r.barangay, r.sitio) }, { label: 'Balance', num: true, render: (r) => peso(r.balance) },
         { label: '', render: (r) => h('button', { class: 'btn small', type: 'button', text: 'Select', onclick: () => openAccount(r.meter_id) }) }],
         d.customers, 'No matching account.')));
       if (d.customers.length === 1) openAccount(d.customers[0].meter_id);
@@ -30,7 +30,7 @@ function start() {
       f('account').hidden = false;
       f('account').replaceChildren(
         h('div', { class: 'card' }, h('h2', { text: `${c.first_name} ${c.last_name} · Meter ${c.meter_id}` }),
-          h('p', { class: 'muted', text: `${brgy(c.barangay)}, ${c.sitio} · Total balance ${peso(owing)}` }),
+          h('p', { class: 'muted', text: `${address(c.barangay, c.sitio)} · Total balance ${peso(owing)}` }),
           c.is_active ? null : h('div', { class: 'msg warn', text: 'This account is inactive. Payments cannot be recorded until an administrator reactivates it.' })),
         h('div', { class: 'card' }, h('h3', { text: 'Bills' }), table([
           { label: 'Month', render: (b) => fmtPeriod(b.billing_period) }, { label: 'Due', render: (b) => fmtDate(b.duedate) },

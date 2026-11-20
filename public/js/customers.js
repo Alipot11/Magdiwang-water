@@ -1,4 +1,4 @@
-import { h, api, initPage, showMsg, brgy, barangayOptions, table, peso } from './common.js';
+import { h, api, initPage, showMsg, brgy, address, barangayOptions, table, peso } from './common.js';
 
 const me = await initPage(['admin']);
 if (me) start();
@@ -31,7 +31,7 @@ function start() {
   function edit(c) {
     editing = c.meter_id;
     f('meter_id').value = c.meter_id; f('meter_id').disabled = true;
-    f('first_name').value = c.first_name; f('last_name').value = c.last_name; f('barangay').value = c.barangay; f('sitio').value = c.sitio;
+    f('first_name').value = c.first_name; f('last_name').value = c.last_name; f('barangay').value = c.barangay; f('sitio').value = c.sitio || '';
     f('phone').value = c.phone ? '0' + c.phone.slice(3) : ''; f('sms_opt_in').checked = !!c.sms_opt_in;
     f('form_title').textContent = `Edit meter ${c.meter_id}`; f('save_btn').textContent = 'Save changes'; f('cancel_btn').hidden = false;
     f('cust_form').scrollIntoView({ behavior: 'smooth' });
@@ -49,7 +49,7 @@ function start() {
       const d = await api(`/customers?${qs}`);
       f('list').replaceChildren(table([
         { label: 'Meter', key: 'meter_id' }, { label: 'Name', render: (r) => `${r.first_name} ${r.last_name}` },
-        { label: 'Address', render: (r) => `${brgy(r.barangay)}, ${r.sitio}` }, { label: 'Balance', num: true, render: (r) => peso(r.balance) },
+        { label: 'Address', render: (r) => address(r.barangay, r.sitio) }, { label: 'Balance', num: true, render: (r) => peso(r.balance) },
         { label: 'SMS', render: (r) => (r.phone ? (r.sms_opt_in ? '0' + r.phone.slice(3) : 'Not agreed') : '—') },
         { label: 'Status', render: (r) => h('span', { class: `badge ${r.is_active ? 'active' : 'inactive'}`, text: r.is_active ? 'Active' : 'Inactive' }) },
         { label: '', render: (r) => h('div', { class: 'actions' }, h('button', { class: 'btn small secondary', type: 'button', text: 'Edit', onclick: () => edit(r) }),

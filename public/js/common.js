@@ -1,6 +1,10 @@
 // Shared helpers for every page. All user text goes through textContent (never innerHTML).
 export const BARANGAYS = ['agutay', 'agsao', 'ipil', 'ambulong', 'poblacion', 'jao-asan', 'dulangan', 'tampayan', 'silum'];
 export const brgy = (v) => (v ? v.replace(/(^|-)(\w)/g, (m, a, c) => a + c.toUpperCase()) : '');
+export const address = (barangay, sitio, paren = false) => {
+  const b = brgy(barangay);
+  return sitio ? (paren ? `${b} (${sitio})` : `${b}, ${sitio}`) : b;
+};
 export const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH');
 export const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
 export const fmtPeriod = (p) => (p ? new Date(p + '-01T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long' }) : '—');

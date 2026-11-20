@@ -8,10 +8,11 @@ const customers = new Hono();
 function validate(body) {
   const first_name = cleanText(body.first_name);
   const last_name = cleanText(body.last_name);
-  const sitio = cleanText(body.sitio);
   if (!first_name || !last_name) return { error: 'Enter the first and last name (up to 100 characters each).' };
   if (!BARANGAYS.includes(body.barangay)) return { error: 'Choose a barangay.' };
-  if (!sitio) return { error: 'Enter the sitio (up to 100 characters).' };
+  const rawSitio = typeof body.sitio === 'string' ? body.sitio.trim() : '';
+  const sitio = rawSitio ? cleanText(rawSitio) : null;          // empty = no sitio
+  if (rawSitio && !sitio) return { error: 'The sitio can be up to 100 characters.' };
     const rawPhone = typeof body.phone === 'string' ? body.phone.trim() : '';
   let phone = null;
   if (rawPhone) {
@@ -112,7 +113,7 @@ customers.put('/:id', ADMIN_ONLY, async (c) => {
     db.prepare(`UPDATE customers SET first_name = ?, last_name = ?, first_name_norm = ?, last_name_norm = ?, barangay = ?, sitio = ?, phone = ?, sms_opt_in = ? WHERE meter_id = ?`)
       .bind(first_name, last_name, normName(first_name), normName(last_name), barangay, sitio, phone, sms_opt_in, id),
     auditStmt(db, { userId: c.get('user').user_id, meterId: id, first: first_name, last: last_name, action: 'UPDATE', table: 'customers', recordId: id,
-      description: `Meter ${id} updated: ${changes.join(', ')}. Was "${old.first_name} ${old.last_name}", ${old.barangay}, ${old.sitio}` }),
+      description: `Meter ${id} updated: ${changes.join(', ')}. Was "${old.first_name} ${old.last_name}", ${old.barangay}, ${old.sitio || 'no sitio'}` }),
   ]);
   return c.json({ success: true });
 });

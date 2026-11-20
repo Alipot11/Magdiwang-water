@@ -1,4 +1,4 @@
-import { h, api, initPage, showMsg, brgy, peso, fmtDate, fmtPeriod, fmtDateTime } from './common.js';
+import { h, api, initPage, showMsg, brgy, address, peso, fmtDate, fmtPeriod, fmtDateTime } from './common.js';
 
 const me = await initPage(['admin', 'treasurer', 'staff']);
 if (me) {
@@ -19,7 +19,7 @@ if (me) {
       h('h1', { text: 'Magdiwang Water Supply System' }), h('p', { class: 'center', text: 'Magdiwang, Romblon' }),
       h('p', { class: 'center', text: 'OFFICIAL RECEIPT' }), h('hr'),
       line('Receipt no.', p.receipt_no), line('Date paid', fmtDate(p.payment_date)), line('Recorded', fmtDateTime(p.created_at)), h('hr'),
-      line('Customer', `${p.first_name} ${p.last_name}`), line('Meter no.', String(p.meter_id)), line('Address', `${brgy(p.barangay)}, ${p.sitio}`), h('hr'),
+      line('Customer', `${p.first_name} ${p.last_name}`), line('Meter no.', String(p.meter_id)), line('Address', address(p.barangay, p.sitio)), h('hr'),
       line('Billing month', fmtPeriod(p.billing_period)), line('Previous reading', String(p.pre_reading)), line('Current reading', String(p.curr_reading)),
       line('Consumption (m³)', String(p.tcmeter)), line('Water charge', peso(p.amount)), line('Surcharge', peso(p.surcharge)), line('Bill total', peso(p.bill_amount)), h('hr'),
       line('AMOUNT PAID', peso(p.amount_paid), 'total'),

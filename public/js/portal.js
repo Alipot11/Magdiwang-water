@@ -1,4 +1,4 @@
-import { h, apiPublic, brgy, peso, fmtDate, fmtPeriod, ApiError } from './common.js';
+import { h, apiPublic, address, peso, fmtDate, fmtPeriod, ApiError } from './common.js';
 import { initI18n, t } from './i18n.js';
 
 const form = document.getElementById('lookup_form');
@@ -17,7 +17,7 @@ function render() {
     h('div', { class: 'balance-hero' },
       h('div', { class: 'title', text: t('statement') }),
       h('div', { class: 'who strong', text: `${t('name')}: ${customer.first_name} ${customer.last_name}` }),
-      h('div', { class: 'who', text: `${t('address')}: ${brgy(customer.barangay)} (${customer.sitio})` }),
+      h('div', { class: 'who', text: `${t('address')}: ${address(customer.barangay, customer.sitio, true)}` }),
       h('div', { class: 'who', text: `${t('meter_no')}: ${customer.meter_id}` }),
       h('div', { class: 'big', text: peso(due) }),
       h('div', { class: 'who', text: due > 0 ? t('total_unpaid') : t('all_paid') })),

@@ -11,7 +11,7 @@ if (me) {
     const line = (k, v, cls = '') => h('div', { class: `line ${cls}` }, h('span', { text: k }), h('b', { text: v }));
     document.getElementById('sheets').replaceChildren(...bills.map((b) => h('div', { class: 'paper a4 bill-sheet' },
       h('h1', { text: 'Magdiwang Water Supply System' }), h('p', { class: 'center', text: 'Magdiwang, Romblon · WATER BILL' }), h('hr'),
-      line('Customer', `${b.first_name} ${b.last_name}`), line('Meter no.', String(b.meter_id)), line('Address', `${brgy(b.barangay)}, ${b.sitio}`),
+      line('Customer', `${b.first_name} ${b.last_name}`), line('Meter no.', String(b.meter_id)), line('Address', address(b.barangay, b.sitio)),
       line('Billing month', fmtPeriod(b.billing_period)), line('Bill no.', String(b.bill_id)), h('hr'),
       line('Previous reading', String(b.pre_reading)), line('Current reading', String(b.curr_reading)), line('Consumption (m³)', String(b.tcmeter)), h('hr'),
       line('Water charge', peso(b.amount)), line('Surcharge', peso(b.surcharge)), line('Total bill', peso(b.bill_amount)),
