@@ -89,7 +89,10 @@ export async function initPage(roles) {
     h('a', { href, text: label, 'aria-current': location.pathname === href ? 'page' : null }));
   const scope = me.role === 'admin' ? 'Administrator' : `${me.role === 'treasurer' ? 'Treasurer' : 'Staff'} · ${brgy(me.barangay)}`;
   document.getElementById('topbar').replaceChildren(h('div', { class: 'topbar-inner' },
-    h('span', { class: 'brand', text: 'Magdiwang Water' }),
+    h('span', { class: 'brand' },
+      h('img', { class: 'logo', src: '/img/logo-1.webp', alt: '', width: '36', height: '36' }),
+      h('img', { class: 'logo', src: '/img/logo-2.webp', alt: '', width: '36', height: '36' }),
+      'Magdiwang Water Supply System'),
     h('nav', { class: 'topbar-nav', 'aria-label': 'Main' }, links),
     h('div', { class: 'topbar-user' }, h('span', { text: `${me.full_name} (${scope})` }),
       h('button', { class: 'btn', type: 'button', text: 'Log out', onclick: async () => {
