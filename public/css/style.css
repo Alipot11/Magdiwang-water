@@ -105,6 +105,9 @@ body.portal { background: linear-gradient(180deg, var(--deep) 0, var(--deep) 220
 .balance-hero { background: var(--deep); color: #fff; border-radius: var(--radius); padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
 .balance-hero .big { font-size: 2.6rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .balance-hero .who { color: #cfe6ee; }
+.balance-hero .title { font-size: 1.25rem; font-weight: 700; margin-bottom: .35rem; }
+.balance-hero .strong { font-weight: 700; color: #fff; }
+.balance-hero .big { margin-top: .5rem; }
 .bill { border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem 1rem; margin-bottom: .7rem; background: #fff; }
 .bill-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .4rem; }
 .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .4rem 1rem; font-size: .9rem; }

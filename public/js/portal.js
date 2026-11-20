@@ -1,4 +1,4 @@
-import { h, apiPublic, peso, fmtDate, fmtPeriod, ApiError } from './common.js';
+import { h, apiPublic, brgy, peso, fmtDate, fmtPeriod, ApiError } from './common.js';
 import { initI18n, t } from './i18n.js';
 
 const form = document.getElementById('lookup_form');
@@ -15,7 +15,10 @@ function render() {
   result.hidden = false;
   result.replaceChildren(
     h('div', { class: 'balance-hero' },
-      h('div', { class: 'who', text: `${t('account_of')} ${customer.first_name} ${customer.last_name} · ${t('meter_no')} ${customer.meter_id}` }),
+      h('div', { class: 'title', text: t('statement') }),
+      h('div', { class: 'who strong', text: `${t('name')}: ${customer.first_name} ${customer.last_name}` }),
+      h('div', { class: 'who', text: `${t('address')}: ${brgy(customer.barangay)} (${customer.sitio})` }),
+      h('div', { class: 'who', text: `${t('meter_no')}: ${customer.meter_id}` }),
       h('div', { class: 'big', text: peso(due) }),
       h('div', { class: 'who', text: due > 0 ? t('total_unpaid') : t('all_paid') })),
     customer.is_active ? null : h('div', { class: 'msg warn', text: t('inactive') }),
@@ -32,9 +35,10 @@ function billCard(b) {
     h('div', { class: 'bill-head' }, h('strong', { text: fmtPeriod(b.billing_period) }),
       h('span', { class: `badge ${b.status.toLowerCase().replace(/ /g, '-')}`, text: t(b.status) })),
     h('div', { class: 'kv' },
+      kv(t('curr_reading'), b.curr_reading), kv(t('prev_reading'), b.pre_reading), kv(t('consumption'), b.tcmeter),
       kv(t('water_charge'), peso(b.amount)), kv(t('surcharge'), peso(b.surcharge)), kv(t('total'), peso(b.bill_amount)),
-      kv(t('paid'), peso(b.total_paid)), kv(t('balance'), peso(b.balance)), kv(t('due_date'), fmtDate(b.duedate)),
-      kv(t('prev_reading'), b.pre_reading), kv(t('curr_reading'), b.curr_reading), kv(t('consumption'), b.tcmeter)));
+      kv(t('due_date'), fmtDate(b.duedate)),
+      kv(t('paid'), peso(b.total_paid)), kv(t('balance'), peso(b.balance))));
 }
 
 form.addEventListener('submit', async (e) => {

@@ -20,7 +20,7 @@ portal.post('/lookup', async (c) => {
 
   const customer = meter && first && last
     ? await db.prepare(
-        `SELECT meter_id, first_name, last_name, is_active FROM customers
+        `SELECT meter_id, first_name, last_name, barangay, sitio, is_active FROM customers
          WHERE meter_id = ? AND first_name_norm = ? AND last_name_norm = ?`
       ).bind(meter, normName(first), normName(last)).first()
     : null;
